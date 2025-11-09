@@ -1,0 +1,205 @@
+/*
+Theme Name: Aegean — mbany
+Theme URI:  https://example.invalid/
+Author: mbany
+Description: Motyw przenoszący statyczny wygląd Aegean Yacht Charters do WordPressa.
+Version: 1.0
+*/
+
+:root {
+    --accent: #0ea5a4;
+    --dark: #023047;
+    --muted: #6b7280;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Montserrat, Arial, Helvetica, sans-serif;
+    margin: 0;
+    color: #0b2545;
+    line-height: 1.5;
+}
+
+a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+header {
+    background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=60') center/cover no-repeat;
+    color: #fff;
+}
+
+.nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background: linear-gradient(180deg, rgba(2, 48, 71, 0.45), rgba(2, 48, 71, 0.15));
+}
+
+.brand {
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.nav a {
+    color: #fff;
+    margin-left: 1rem;
+}
+
+.hero {
+    /* full-bleed hero: element stretches full width, inner .container keeps content aligned */
+    padding: 6rem 2rem 4rem;
+    text-align: left;
+    width: 100%;
+    position: relative;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    /* background image defined below (keeps color fallback) */
+}
+
+.hero h1 {
+    font-size: 2.6rem;
+    margin: 0 0 .5rem;
+}
+
+.cta {
+    display: inline-block;
+    background: var(--accent);
+    color: #013240;
+    padding: .8rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+main {
+    padding: 3rem 2rem;
+    background: #f8fafc;
+}
+
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem;
+}
+
+.card {
+    background: #fff;
+    padding: 1.25rem;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(2, 48, 71, 0.06);
+    transform: translateZ(0);
+    transition: transform .28s cubic-bezier(.2, .9, .2, 1), box-shadow .28s;
+}
+
+.card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 18px 36px rgba(2, 48, 71, 0.14);
+}
+
+.fade-in {
+    animation: fadeIn .9s ease both;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.icon {
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #e6fffb, #d6f6f5);
+    margin-bottom: .75rem;
+}
+
+.icon svg {
+    width: 22px;
+    height: 22px;
+    fill: var(--dark);
+}
+
+.icon:hover {
+    transform: translateY(-6px) rotate(-4deg);
+    transition: transform .25s ease;
+}
+
+.fleet-card img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: .75rem;
+}
+
+.fleet-card h3 {
+    margin: .25rem 0;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+footer {
+    background: #012b3a;
+    color: #cfecee;
+    padding: 2rem;
+}
+
+.footer-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+@media(min-width:900px) {
+    .hero h1 {
+        font-size: 3.4rem;
+    }
+}
+
+/* drobne poprawki kompatybilności z WP admin bar */
+html.admin-bar .site-header {
+    top: 32px;
+}
+
+/* Jeśli .hero nie jest wewnątrz <header>, ustaw tło bezpośrednio na .hero oraz dodaj overlay */
+.hero {
+    background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=60') center/cover no-repeat;
+    color: #fff;
+}
+
+/* dark overlay for better text contrast */
+.hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(2, 48, 71, 0.45), rgba(2, 48, 71, 0.15));
+    pointer-events: none;
+}

@@ -1,0 +1,14 @@
+[client]
+# Konfiguracja klienta (domyślna). Pozostawiamy bez zmian.
+
+[mysqld]
+# Szybsze DNS: wyłącz reverse DNS przy połączeniach
+skip-name-resolve
+skip-external-locking
+symbolic-links=0
+
+# Nasłuchuj na wszystkich interfejsach dockera (TCP 3306)
+bind-address=0.0.0.0
+
+# NIE wyłączamy TCP (skip-networking) i NIE wyłączamy gniazda unix.
+# Domyślna konfiguracja jest poprawna dla kontenerów i narzędzi takich jak mysqladmin.

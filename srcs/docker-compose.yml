@@ -1,0 +1,141 @@
+services:
+  # 1. SERWIS MARIADB (Baza Danych)
+  mariadb:
+    build: 
+      # Wskazuje na katalog, w którym znajduje się Dockerfile dla bazy danych
+      context: ./requirements/mariadb 
+    container_name: mariadb
+    image: mariadb
+    volumes:
+      # Wymagany wolumen. Mapuje kontenerowy /var/lib/mysql na wolumen mariadb_volume
+      - mariadb_volume:/var/lib/mysql
+    env_file:
+      - .env # Używa zmiennych środowiskowych (haseł, nazwy bazy) z pliku .env
+    networks:
+      - inception_network # Łączy się z siecią wewnętrzną
+    restart: always # Kontener musi restartować po awarii
+    healthcheck:
+      # Używamy lokalnego socketu unixowego, ponieważ domyślna autoryzacja roota może wymagać unix_socket.
+      # Ping przez socket działa wewnątrz kontenera i nie generuje 'unauthenticated' warnings.
+      test: ["CMD-SHELL", "mysqladmin ping -S /run/mysqld/mysqld.sock --silent || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  # 1.5 SERWIS REDIS (Bonus)
+  redis:
+    build:
+      context: ./requirements/redis
+    container_name: redis
+    image: redis
+    volumes:
+      - redis_volume:/data
+    networks:
+      - inception_network
+    restart: always
+
+  # Bonus: prosty serwis statyczny (nie-PHP)
+  static_site:
+    build:
+      context: ./requirements/static_site
+    container_name: static_site
+    image: static_site
+    ports:
+      - "8080:80"
+    networks:
+      - inception_network
+    restart: always
+
+  # Bonus: Adminer (DB GUI)
+  adminer:
+    build:
+      context: ./requirements/adminer
+    container_name: adminer
+    image: adminer
+    ports:
+      - "8081:80"
+    networks:
+      - inception_network
+    restart: always
+
+  # 2. SERWIS WORDPRESS + PHP-FPM
+  wordpress:
+    build: 
+      # Wskazuje na katalog, w którym znajduje się Dockerfile dla WordPressa
+      context: ./requirements/wordpress 
+    container_name: wordpress
+    image: wordpress
+    env_file:
+      - .env
+    volumes:
+      # Drugi wymagany wolumen. /var/www/html przechowuje pliki WordPressa
+      - wordpress_volume:/var/www/html
+    networks:
+      - inception_network 
+    restart: always
+    depends_on:
+      - mariadb
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/9000' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  # 3. SERWIS NGINX (Reverse Proxy / Jedyny punkt wejścia)
+  nginx:
+    build: 
+      # Wskazuje na katalog, w którym znajduje się Dockerfile dla NGINX
+      context: ./requirements/nginx
+    container_name: nginx
+    image: nginx
+    ports:
+      # Wymagane: jedyne wejście do infrastruktury, tylko port 443 (HTTPS)
+      - "443:443" 
+    volumes:
+      # Montowanie wolumenu WordPress, aby NGINX miał dostęp do plików statycznych i PHP-FPM
+      - wordpress_volume:/var/www/html
+      # Montujemy lokalny katalog z certyfikatami (self-signed lub produkcyjnymi)
+      - ./requirements/nginx/ssl:/etc/ssl/certs:ro
+    networks:
+      - inception_network
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - wordpress # Start wordpress przed nginx
+      
+# WOLUMENY (Dane powinny być przechowywane w /home/login/data/)
+volumes:
+  # Wolumen dla MariaDB
+  mariadb_volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      # ${USER} to zmienna systemowa: katalog /home/<login>/data/mariadb
+      device: /home/${USER}/data/mariadb 
+  
+  # Wolumen dla plików WordPress
+  wordpress_volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /home/${USER}/data/wordpress
+
+  # Wolumen dla Redis (dane cache)
+  redis_volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /home/${USER}/data/redis
+
+# SIEĆ DOCKER
+networks:
+  # Wymagana sieć typu bridge do komunikacji między kontenerami
+  inception_network:
+    driver: bridge
+
