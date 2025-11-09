@@ -1,0 +1,33 @@
+cruseirosazuis:
+Nazwa użytkownika: capitan
+pass: Wu*^WD#8&x$PNqgWbX
+
+michalkcb@gmail.com
+
+
+=====================================================================================================================================
+Redis cache (najprostsza implementacja):
+Utwórz Dockerfile oparty na Debian (penultimate stable), zainstaluj redis-server przez apt i wystartuj w foreground (bez hacków).
+Dodaj serwis redis do docker-compose.yml z wolumenem (jeśli potrzebny) i siecią inception_network.
+W WordPress dodaj wtyczkę i konfigurację do korzystania z Redis (opcjonalnie), lub zostaw jako bonus do demonstracji.
+
+FTP server (np. vsftpd):
+Utwórz Dockerfile instalujący vsftpd i dodaj konfigurację, punkt montowania wskazujący na wordpress_volume (tak, aby FTP miał dostęp do plików WP).
+Upewnij się, że serwer FTP działa w foreground i nie wystawia portów zabronionych w zadaniu (bonus może wymagać otwarcia dodatkowego portu — to dozwolone w bonusie).
+
+Statyczna strona (nie w PHP):
+Utwórz katalog srcs/requirements/static_site/ z prostym index.html i Dockerfile używającym nginx lub python3 -m http.server z Debian jako baza.
+Serwis musi mieć własny Dockerfile i kontener.
+
+Adminer:
+Adminer to pojedynczy plik PHP. Stwórz Dockerfile (Debian), zainstaluj php-fpm oraz prosty serwer (nginx lub użyć php-fpm + nginx) i skopiuj pobrany adminer.php do html.
+Dodaj serwis adminer w docker-compose i opcjonalnie wystaw port (tylko jeśli potrzebne do bonusu).
+
+Drobne zasady i uwagi:
+Każdy bonus service musi mieć Dockerfile i działać w oddzielnym kontenerze.
+Nie używaj gotowych obrazów (np. oficjalny redis, adminer) — to jest zabronione w zadaniu (wyjątkiem może być baza systemowa, ale zasadniczo pisz własne Dockerfile z Debian/Alpine).
+Dodaj wpisy w Makefile aby budować nowe obrazy (konsekwencja z mandatory part).
+Dla bezpieczeństwa: nie commituj haseł i nie umieszczaj ich w Dockerfile; używaj .env lub secrets.
+=====================================================================================================================================
+
+docker compose -f srcs/docker-compose.yml down
