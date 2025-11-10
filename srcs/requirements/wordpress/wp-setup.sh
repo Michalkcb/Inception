@@ -224,6 +224,8 @@ if command -v wp >/dev/null 2>&1 && wp core is-installed --allow-root >/dev/null
         if [ -n "$PAGE_ID" ]; then
             wp option update show_on_front 'page' --allow-root || true
             wp option update page_on_front "$PAGE_ID" --allow-root || true
+                # Ensure comments are open for the front page so comment form is available
+                wp post update "$PAGE_ID" --comment_status=open --allow-root || true
             log "Ustawiono stronę główną na ID: $PAGE_ID"
         else
             log "Nie udało się utworzyć ani znaleźć strony front page"

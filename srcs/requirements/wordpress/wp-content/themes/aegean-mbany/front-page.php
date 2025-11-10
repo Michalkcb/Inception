@@ -83,5 +83,18 @@ get_header();
 </main>
 
 <?php
+/* Wyświetl komentarze powiązane ze stroną ustawioną jako front page */
+$front_id = get_option( 'page_on_front' );
+if ( $front_id ) {
+    $post = get_post( $front_id );
+    if ( $post ) {
+        // Przygotuj globalny $post dla comments_template
+        setup_postdata( $post );
+		// Wywołaj standardowy szablon komentarzy motywu. Jeśli istnieje plik comments.php,
+		// to zostanie on użyty do wyświetlenia listy komentarzy i formularza.
+		comments_template();
+        wp_reset_postdata();
+    }
+}
 get_footer();
 ?>
