@@ -7,8 +7,8 @@ services:
     container_name: mariadb
     image: mariadb
     volumes:
-      # Wymagany wolumen. Mapuje kontenerowy /var/lib/mysql na wolumen mariadb_volume
-      - mariadb_volume:/var/lib/mysql
+      # Bind-mount katalogu danych MariaDB bezpośrednio do hosta
+      - /home/${USER}/data/mariadb:/var/lib/mysql
     env_file:
       - .env # Używa zmiennych środowiskowych (haseł, nazwy bazy) z pliku .env
     networks:
@@ -30,7 +30,7 @@ services:
     container_name: redis
     image: redis
     volumes:
-      - redis_volume:/data
+      - /home/${USER}/data/redis:/data
     networks:
       - inception_network
     restart: always
@@ -47,6 +47,18 @@ services:
       - inception_network
     restart: always
 
+  # Bonus: Uptime / Health simple service (free-choice)
+  uptime:
+    build:
+      context: ./requirements/uptime
+    container_name: uptime
+    image: uptime
+    ports:
+      - "8082:80"
+    networks:
+      - inception_network
+    restart: unless-stopped
+
   # Bonus: Adminer (DB GUI)
   adminer:
     build:
@@ -55,6 +67,25 @@ services:
     image: adminer
     ports:
       - "8081:80"
+    networks:
+      - inception_network
+    restart: always
+
+  # BONUS: FTP (simple vsftpd) — bind-mounted to host /home/${USER}/data/ftp
+  ftp:
+    build:
+      context: ./requirements/ftp
+    container_name: ftp
+    image: ftp
+    env_file:
+      - .env
+    ports:
+      - "21:21"
+      - "30000-30009:30000-30009"
+    volumes:
+      # Host bind mount for persistent FTP files
+      - /home/${USER}/data/ftp:/home/ftpusers
+      # NOTE: do NOT mount the same host dir twice (would cause recursive copy)
     networks:
       - inception_network
     restart: always
@@ -69,8 +100,8 @@ services:
     env_file:
       - .env
     volumes:
-      # Drugi wymagany wolumen. /var/www/html przechowuje pliki WordPressa
-      - wordpress_volume:/var/www/html
+      # Bind-mount katalogu WordPress bezpośrednio na hosta
+      - /home/${USER}/data/wordpress:/var/www/html
     networks:
       - inception_network 
     restart: always
@@ -95,7 +126,7 @@ services:
       - "443:443" 
     volumes:
       # Montowanie wolumenu WordPress, aby NGINX miał dostęp do plików statycznych i PHP-FPM
-      - wordpress_volume:/var/www/html
+      - /home/${USER}/data/wordpress:/var/www/html
       # Montujemy lokalny katalog z certyfikatami (self-signed lub produkcyjnymi)
       - ./requirements/nginx/ssl:/etc/ssl/certs:ro
     networks:
@@ -107,31 +138,10 @@ services:
       - wordpress # Start wordpress przed nginx
       
 # WOLUMENY (Dane powinny być przechowywane w /home/login/data/)
-volumes:
-  # Wolumen dla MariaDB
-  mariadb_volume:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      # ${USER} to zmienna systemowa: katalog /home/<login>/data/mariadb
-      device: /home/${USER}/data/mariadb 
-  
-  # Wolumen dla plików WordPress
-  wordpress_volume:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: /home/${USER}/data/wordpress
-
-  # Wolumen dla Redis (dane cache)
-  redis_volume:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: /home/${USER}/data/redis
+# Używamy bezpośrednich bind-mountów na hosta dla trwałych danych:
+# - /home/${USER}/data/mariadb -> /var/lib/mysql
+# - /home/${USER}/data/wordpress -> /var/www/html
+# - /home/${USER}/data/redis -> /data
 
 # SIEĆ DOCKER
 networks:

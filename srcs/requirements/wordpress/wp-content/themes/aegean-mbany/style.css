@@ -23,6 +23,49 @@ body {
     line-height: 1.5;
 }
 
+/* Comments styling */
+.comment-list {
+    list-style: decimal;
+    /* numeric list */
+    margin: 1.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.comment-item {
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding-bottom: 1rem;
+}
+
+.comment-meta {
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+}
+
+.comment-content {
+    /* fall back to inherited color if --text-color not defined */
+    color: inherit;
+}
+
+.comment-form-comment textarea {
+    width: 100%;
+    max-width: 100%;
+    padding: 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+}
+
+.comment-form input[type="submit"] {
+    /* --accent-color was not defined; use --accent with a fallback hex color */
+    background: var(--accent, #0ea5a4);
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-block;
+}
+
 a {
     color: var(--accent);
     text-decoration: none;

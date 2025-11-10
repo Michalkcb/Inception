@@ -1,8 +1,5 @@
 # Inception — instrukcja uruchomienia i pełna procedura oceny (PL)
 
-Ten plik zawiera: krótkie instrukcje uruchomienia, oraz szczegółową, krok-po-kroku procedurę, której powinien użyć egzaminator podczas oceny projektu.
-Wszystkie polecenia wykonuj z katalogu głównego repozytorium (~/inception).
-
 UWAGI OGÓLNE
 - Pliki konfiguracyjne znajdują się w katalogu `srcs`.
 - Makefile buduje obrazy i uruchamia stack: `make up`.
@@ -50,7 +47,7 @@ curl -I http://localhost:8080/    # statyczna strona (bonus)
 ```
 
 ------------------------------------------------------------
-PEŁNA PROCEDURA DLA OCENIACZA
+PEŁNA PROCEDURA
 ------------------------------------------------------------
 
 Poniższe kroki prowadzą od pełnego czyszczenia środowiska do sprawdzenia wszystkich obowiązkowych punktów i bonusów.
@@ -199,14 +196,26 @@ Krok 12 — statyczna strona (bonus)
 curl -I http://localhost:8080/
 ```
 
-Krok 13 — podsumowanie warunków do zaliczenia (eval.txt)
+Krok 13 — podsumowanie warunków do zaliczenia
 
 - `Makefile` w katalogu głównym — musi być i działać (`make up`).
 - `srcs/` zawiera Dockerfile dla każdego serwisu.
 - brak `network: host` i `links:` w `docker-compose.yml`.
 - Nginx nasłuchuje tylko na 443 i używa TLS.
+```bash
+docker exec -it nginx bash -lc "ls -l /etc/nginx/ssl || ls -l /etc/ssl || true"
+docker exec -it nginx bash -lc "sed -n '1,240p' /etc/nginx/sites-available/default || true"
+```
 - WordPress z php-fpm działa i jest zainstalowany.
+```bash
+docker compose -f srcs/docker-compose.yml ps
+```
 - MariaDB działa, a wolumeny są bind-mounted do `/home/<login>/data/`.
+```bash
+docker inspect --format '{{json .Mounts}}' mariadb | jq
+docker exec -it mariadb bash -lc "mysql -uroot -p\"${MYSQL_ROOT_PASSWORD:-42}\" -e 'SHOW DATABASES;'"
+docker volume inspect srcs_mariadb_volume --format '{{.Mountpoint}}'
+```
 - Można edytować stronę w panelu admin i zmiany są trwałe po restarcie — to potwierdza persystencję.
 
 Krok 14 — przydatne debug-komendy
@@ -223,15 +232,9 @@ Krok 15 — co zrobić, jeśli Nginx nie startuje z powodu certyfikatu
 Sprawdź, czy klucz i cert są poprawne (PEM). Jeśli w repo jest placeholder, wygeneruj poprawny cert openssl (patrz Krok 4) i restartuj nginx.
 
 ------------------------------------------------------------
-BONUS: automatyzacja sprawdzeń
+BONUS: 
 ------------------------------------------------------------
-Jeśli chcesz, mogę dodać skrypt `scripts/run_eval_checks.sh`, który uruchomi większość powyższych komend i wypisze PASS/FAIL.
 
----
-
-Powodzenia przy ocenie — jeśli chcesz, od razu dodam `scripts/run_eval_checks.sh` lub skrócę instrukcję do jednej komendy do uruchomienia.
-Przygotowanie przed commitem / instrukcje dla oceny
------------------------------------------------
 Przed przesłaniem repo do oceny upewnij się, że nie zawierasz w nim żadnych sekretów ani prywatnych kluczy. Poniżej
 krótka checklistka i polecenia, które warto wykonać:
 1) Usuń prywatne klucze i pliki z wrażliwymi danymi
@@ -266,19 +269,8 @@ docker compose -f srcs/docker-compose.yml ps
 docker exec -it redis redis-cli PING
 curl -k -I https://mbany.42.fr/ || curl -I http://localhost:8080/
 ```
-Jeśli chcesz, mogę:
-- dodać `srcs/.env.sample` z pustymi wartościami,
-- dodać skrypt `scripts/prepare_release.sh`, który automatycznie czyści pliki tymczasowe i tworzy plik `.tar.gz` gotowy do przesłania.
-Projekt Inception — instrukcja uruchomienia i weryfikacji
 
-Krótko:
-- Wszystkie pliki konfiguracyjne znajdują się w katalogu `srcs`.
-- Uruchamianie: `make up` (buduje obrazy i podnosi kontenery).
-- Czyszczenie: `make clean` (usuwa kontenery, obrazy i wolumeny).
 
-Wymagania środowiskowe:
-- Docker i Docker Compose (v2) zainstalowane na maszynie.
-- Uruchomić na Virtual Machine zgodnie z subject.
 
 Szybkie kroki:
 1. Skonfiguruj `srcs/.env` (przykładowe zmienne są tam już obecne).
@@ -297,97 +289,118 @@ docker inspect -f '{{json .State.Health}}' mariadb | jq .
 curl -k -I https://mbany.42.fr/
 ```
 
-Bezpieczeństwo:
-- Nie umieszczaj haseł w Dockerfile. Trzymaj je w `srcs/.env` lub w `secrets/` (nie commituj). 
-
-Dodatkowe notatki:
-- Wolumeny hosta są montowane w `/home/${USER}/data/mariadb` i `/home/${USER}/data/wordpress`.
-- Obrazy mają nazwy odpowiadające serwisom: `mariadb`, `wordpress`, `nginx`.
-
-Certyfikaty TLS
-----------------
-Domyślnie projekt uruchamia Nginx z certyfikatem self-signed umieszczonym w `srcs/requirements/nginx/ssl/nginx.crt` i
-`srcs/requirements/nginx/ssl/nginx.key`. Taki cert spełnia wymóg działania tylko na HTTPS (port 443, TLSv1.2/1.3),
-ale przeglądarki będą zgłaszać ostrzeżenie (self-signed). Poniżej masz proste opcje jak to zmienić na bardziej odpowiednie
-dla testów lub produkcji.
-
-Opcja 1 — zostawić self-signed (szybko, domyślne):
-
-	- Pliki certyfikatu znajdują się w `srcs/requirements/nginx/ssl/`.
-	- Upewnij się, że klucz prywatny nie trafi do repozytorium (dodaj do `.gitignore` wpis `srcs/requirements/nginx/ssl/*.key`).
-
-Opcja 2 — użyć mkcert (lokalnie zaufany cert dla developmentu):
-
-	1. Zainstaluj mkcert (instrukcje: https://github.com/FiloSottile/mkcert).
-	2. Uruchom na hoście:
-
-```bash
-mkcert -install
-mkcert mbany.42.fr
-```
-
-	3. Skopiuj wygenerowane pliki (`mbany.42.fr.pem` i `mbany.42.fr-key.pem`) do `srcs/requirements/nginx/ssl/` i zmień ich nazwy
-		 na `nginx.crt` i `nginx.key` lub zaktualizuj entrypoint Nginx.
-	4. Restartuj nginx: `docker compose -f srcs/docker-compose.yml up -d --build nginx`.
-
-Opcja 3 — użyć Let's Encrypt (produkcyjnie, wymagane publiczne IP i port 80 albo DNS-01):
-
-	- Jeśli domena `mbany.42.fr` wskazuje publicznie na Twoją VM i możesz chwilowo wystawić port 80, najprościej użyć `certbot` z
-		trybem `--standalone` lub z weryfikacją HTTP. Przykład (na hoście):
-
-```bash
-sudo certbot certonly --standalone -d mbany.42.fr
-# certyfikaty będą w /etc/letsencrypt/live/mbany.42.fr/
-# potem zamontuj je do kontenera nginx i zrestartuj nginx
-```
-
-	- Alternatywnie użyj DNS-01 challenge (jeśli masz dostęp API do strefy DNS) — pozwala wystawić certyfikat bez otwierania portu 80.
-
-Uwaga o bezpieczeństwie
------------------------
-- Nigdy nie commituj prywatnych kluczy do repo. Dodaj `srcs/requirements/nginx/ssl/*.key` do `.gitignore`.
-- Dla oceny projektu: ważne jest, żeby Nginx był jedynym punktem wejścia na porcie 443 i żeby obsługiwał TLSv1.2/1.3 — to już
-	jest spełnione. Jeśli chcesz, przygotuję automatyzację generowania certyfikatu Let's Encrypt lub skrypt do wygenerowania
-	mkcert i podmiany plików w repo.
-
 Dodatkowe serwisy (bonus)
--------------------------
-W repo dodałem dwa przykładowe serwisy bonusowe, aby ułatwić ocenę i testy:
 
-- `redis` — serwis cache (zbudowany z `srcs/requirements/redis/Dockerfile`). Dane Redis są przechowywane w wolumenie
-	bind-mounted do `/home/${USER}/data/redis` na hoście.
-- `static_site` — prosty serwis statyczny (nie-PHP) z `srcs/requirements/static_site` i `index.html`, wystawiony na porcie
-	8080 hosta.
+Jak prezentować serwisy bonusowe — polecenia (ręcznie)
+---------------------------------------------------
+Poniżej znajdują się proste polecenia, które można wkonać, żeby pokazać działanie serwisów bonusowych podczas prezentacji.
 
-Jak testować lokalnie
----------------------
-- Sprawdź listę działających kontenerów:
+1) Szybkie sprawdzenie uruchomionych kontenerów i mapowań portów
 
 ```bash
 docker compose -f srcs/docker-compose.yml ps
 ```
 
-- Test Redis (wewnątrz kontenera):
+Pokazuje listę uruchomionych usług i przekierowane porty (np. `8080->80`, `8081->80`, `443->443`, `21->21`, itp.).
+
+2) Redis — pokazanie, że cache działa
+
+W terminalu uruchom polecenie:
 
 ```bash
 docker exec -it redis redis-cli PING
-# spodziewany output: PONG
+# oczekiwane: PONG
 ```
 
-- Test statycznej strony:
+Redis działa jako szybkie, pamięciowe repozytorium klucz-wartość (in-memory), wykorzystywane tutaj jako object cache dla WordPress — przechowuje tymczasowe wyniki i sesje, żeby nie odpytywać za każdym razem bazy danych.
+Dzięki temu strona szybciej odpowiada, a obciążenie MariaDB jest mniejsze, co upraszcza testowanie wydajności i poprawia responsywność podczas oceny.
+
+3) Static site — otwórz / pokaż nagłówek strony statycznej
 
 ```bash
 curl -I http://localhost:8080/
 # spodziewane: HTTP/1.1 200 OK
 curl -s http://localhost:8080/ | sed -n '1,20p'
-# zobaczysz prosty HTML index
 ```
 
-Uwagi:
-- Każdy dodatkowy serwis musi mieć własny `Dockerfile` i działać w dedykowanym kontenerze — to zostało spełnione dla powyższych
-	przykładów.
-- Jeżeli chcesz, mogę dodatkowo: zintegrować Redis z WordPressem (do cache; wymaga instalacji PHP Redis extension i
-	konfiguracji WP), dodać Adminer lub FTP — napisz, który z nich chcesz mieć zaimplementowany dalej.
+Statyczna strona to prosty serwis, który służy wyłącznie do serwowania plików HTML/CSS bez PHP czy bazy danych — działa jako lekki serwer plików na porcie 8080.
+Jest użyteczna, bo pozwala pokazać dodatkowy, niezależny serwis (np. landing page lub demo) bez wpływu na aplikację WordPress i bez dodatkowego obciążenia bazy.
 
+4) Adminer (DB GUI) — sprawdzenie dostępności panelu
 
-Jeśli chcesz, mogę teraz uruchomić `make clean` i `make up` i sprawdzić end-to-end — potwierdź, żebym kontynuował.
+```bash
+curl -I http://localhost:8081/
+# lub otwórz w przeglądarce: http://localhost:8081/
+```
+
+Adminer to lekki interfejs webowy do zarządzania bazą danych (analogiczny do phpMyAdmin): łączy się z MariaDB i pozwala przeglądać, edytować oraz wykonywać zapytania SQL.
+Jest przydatny podczas oceny, bo umożliwia szybkie, graficzne sprawdzenie zawartości bazy i debug bez konieczności używania CLI.
+
+5) FTP — podstawowa demonstracja (po uruchomieniu usługi `ftp`)
+
+Upewnij się, że w `srcs/.env` masz ustawione `FTP_USER` i `FTP_PASS` (lokalnie, nie commituj pliku).
+
+Sprawdź, czy hostowy katalog istnieje i zawiera pliki do pokazania:
+
+```bash
+ls -la /home/${USER}/data/ftp
+```
+
+Połącz się z serwerem FTP z hosta (przykład z `lftp`):
+
+```bash
+# jeśli masz zainstalowane lftp
+lftp -u "$FTP_USER","$FTP_PASS" -p 21 127.0.0.1
+
+# lub prosty test z ftp (uwaga: hasło przesyłane otwartym tekstem)
+ftp -p 127.0.0.1 21
+```
+
+Jeśli chcesz pokazać, że plik został zapisany na hostzie i jest widoczny w kontenerze FTP:
+
+```bash
+# po stronie hosta
+ls -la /home/${USER}/data/ftp
+
+# wewnątrz kontenera (opcjonalnie)
+docker exec -it ftp ls -la /home/ftpusers
+```
+
+Serwer FTP udostępnia katalog użytkownika przez protokół FTP (tekstowy, nieszyfrowany) i pozwala na przesyłanie plików przy użyciu konta FTP skonfigurowanego w `srcs/.env`.
+To przydatny przykład usługi przechowywania plików, bo pokazuje transfer i trwałość danych — pliki wrzucone przez FTP są widoczne w hostowym katalogu `/home/<login>/data/ftp`.
+
+6) Uptime / Health (bonus) — jak pokazać
+
+Uptime to prosty serwis zwracający JSON z aktualnym czasem i statusem usługi. Serwis jest zbudowany lokalnie i wystawiony na porcie 8082; podczas prezentacji wystarczy wykonać żądanie HTTP, aby pokazać, że działa.
+
+Demo:
+
+```bash
+# zbuduj i uruchom serwis (jeśli jeszcze nie uruchomiony)
+docker compose -f srcs/docker-compose.yml up -d --build uptime
+
+# sprawdź nagłówki (oczekiwane: 200)
+curl -I http://localhost:8082/
+
+# pobierz status w formacie JSON (zawiera pole time)
+curl -sS http://localhost:8082/status.json
+```
+
+Użyteczność: to prosty, niezależny endpoint monitoringu/healthcheck, idealny do pokazania dodania małego micro‑servisu oraz do testów routingu i mapowania portów bez angażowania WordPressa.
+
+7) Sprawdź logi serwisów bonusowych (jeśli coś nie działa)
+
+```bash
+docker compose -f srcs/docker-compose.yml logs --tail=100 redis
+docker compose -f srcs/docker-compose.yml logs --tail=100 static_site
+docker compose -f srcs/docker-compose.yml logs --tail=100 adminer
+docker compose -f srcs/docker-compose.yml logs --tail=200 ftp
+docker compose -f srcs/docker-compose.yml logs --tail=100 uptime
+```
+
+7) Pokaz portów i mountów (dowód persystencji danych dla bonusów)
+
+```bash
+docker inspect -f '{{range .Mounts}}{{println .Source "->" .Destination}}{{end}}' ftp
+docker inspect -f '{{range .Mounts}}{{println .Source "->" .Destination}}{{end}}' redis
+```

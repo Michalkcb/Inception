@@ -191,16 +191,16 @@ For obvious security reasons, any credentials, API keys, passwords,
 etc., must be saved locally in various ways / files and ignored by
 git. Publicly stored credentials will lead you directly to a failure
 of the project.
-10
 Inception
 You can store your variables (as a domain name) in an environment
 variable file like .env
-11
+
 Chapter VI
 Bonus part
 For this project, the bonus part is intended to be simple.
 A Dockerfile must be written for each additional service. Thus, each service will run
 inside its own container and will have, if necessary, its dedicated volume.
+
 Bonus list:
 • Set up redis cache for your WordPress website in order to properly manage the
 cache.
@@ -210,6 +210,7 @@ is excluded). For example, a showcase site or a site for presenting your resume.
 • Set up Adminer.
 • Set up a service of your choice that you think is useful. During the defense, you
 will have to justify your choice.
+
 To complete the bonus part, you have the possibility to set up extra
 services. In this case, you may open more ports to suit your needs.
 The bonus part will only be assessed if the mandatory part is

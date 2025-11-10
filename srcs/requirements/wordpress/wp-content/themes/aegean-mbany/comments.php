@@ -35,7 +35,8 @@ if ( post_password_required() ) {
             $comment_form_args = array(
                 'title_reply' => __( 'Dodaj komentarz', 'aegean' ),
                 'label_submit' => __( 'Wyślij komentarz', 'aegean' ),
-                'comment_field' => '<p class="comment-form-comment"><label for="comment">' . _x( 'Komentarz', 'noun' ) . '</label><textarea id="comment" name="comment" cols="45" rows="6" required></textarea></p>',
+                // Append a hidden field `aegean_bypass` to indicate our direct-insert handler should run.
+                'comment_field' => '<p class="comment-form-comment"><label for="comment">' . _x( 'Komentarz', 'noun' ) . '</label><textarea id="comment" name="comment" cols="45" rows="6" required></textarea></p>' . "\n" . '<input type="hidden" name="aegean_bypass" value="1" />',
             );
             comment_form( $comment_form_args );
         endif;

@@ -2,6 +2,22 @@
 /* Front page template */
 get_header();
 ?>
+<?php
+// Wyświetl treść strony ustawionej jako "Front Page" (jeśli edytowano w panelu admin).
+// Dzięki temu zmiany w treści strony będą widoczne na froncie.
+$front_id = get_option( 'page_on_front' );
+if ( $front_id ) {
+	$post = get_post( $front_id );
+	if ( $post ) {
+		setup_postdata( $post );
+		echo '<div class="page-content container">';
+		the_content();
+		echo '</div>';
+		wp_reset_postdata();
+	}
+}
+
+?>
 
 <main>
 	<div class="container">
