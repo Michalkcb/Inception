@@ -6,7 +6,7 @@ COMPOSE = docker compose -f srcs/docker-compose.yml
 # Buduje, tworzy i uruchamia wszystkie kontenery
 up:
 	# KLUCZOWA POPRAWKA: Tworzenie katalogów dla bind mount w /home/${USER}/data
-	mkdir -p /home/${USER}/data/mariadb /home/${USER}/data/wordpress /home/${USER}/data/redis
+	mkdir -p /home/${USER}/data/mariadb /home/${USER}/data/wordpress /home/${USER}/data/redis /home/${USER}/data/ftp
 	# Opcja --build wymusza ponowną budowę obrazów
 	# Opcja -d uruchamia w tle
 	$(COMPOSE) up --build -d

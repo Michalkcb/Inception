@@ -1,4 +1,4 @@
-FROM debian:bookworm
+FROM debian:12
 # Użyj Debiana jako obrazu bazowego [cite: 249]
 
 RUN apt update -y && \

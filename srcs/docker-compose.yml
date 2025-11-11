@@ -5,9 +5,8 @@ services:
       # Wskazuje na katalog, w którym znajduje się Dockerfile dla bazy danych
       context: ./requirements/mariadb 
     container_name: mariadb
-    image: mariadb
+    image: mariadb:1.0
     volumes:
-      # Bind-mount katalogu danych MariaDB bezpośrednio do hosta
       - /home/${USER}/data/mariadb:/var/lib/mysql
     env_file:
       - .env # Używa zmiennych środowiskowych (haseł, nazwy bazy) z pliku .env
@@ -28,7 +27,7 @@ services:
     build:
       context: ./requirements/redis
     container_name: redis
-    image: redis
+    image: redis:1.0
     volumes:
       - /home/${USER}/data/redis:/data
     networks:
@@ -40,7 +39,7 @@ services:
     build:
       context: ./requirements/static_site
     container_name: static_site
-    image: static_site
+    image: static_site:1.0
     ports:
       - "8080:80"
     networks:
@@ -52,7 +51,7 @@ services:
     build:
       context: ./requirements/uptime
     container_name: uptime
-    image: uptime
+    image: uptime:1.0
     ports:
       - "8082:80"
     networks:
@@ -64,7 +63,7 @@ services:
     build:
       context: ./requirements/adminer
     container_name: adminer
-    image: adminer
+    image: adminer:1.0
     ports:
       - "8081:80"
     networks:
@@ -76,14 +75,13 @@ services:
     build:
       context: ./requirements/ftp
     container_name: ftp
-    image: ftp
+    image: ftp:1.0
     env_file:
       - .env
     ports:
       - "21:21"
       - "30000-30009:30000-30009"
     volumes:
-      # Host bind mount for persistent FTP files
       - /home/${USER}/data/ftp:/home/ftpusers
       # NOTE: do NOT mount the same host dir twice (would cause recursive copy)
     networks:
@@ -92,15 +90,16 @@ services:
 
   # 2. SERWIS WORDPRESS + PHP-FPM
   wordpress:
-    build: 
+    build:
       # Wskazuje na katalog, w którym znajduje się Dockerfile dla WordPressa
-      context: ./requirements/wordpress 
+      context: ./requirements/wordpress
+      args:
+        WORDPRESS_VERSION: ${WORDPRESS_VERSION:-}
     container_name: wordpress
-    image: wordpress
+    image: wordpress:1.0
     env_file:
       - .env
     volumes:
-      # Bind-mount katalogu WordPress bezpośrednio na hosta
       - /home/${USER}/data/wordpress:/var/www/html
     networks:
       - inception_network 
@@ -120,14 +119,12 @@ services:
       # Wskazuje na katalog, w którym znajduje się Dockerfile dla NGINX
       context: ./requirements/nginx
     container_name: nginx
-    image: nginx
+    image: nginx:1.0
     ports:
       # Wymagane: jedyne wejście do infrastruktury, tylko port 443 (HTTPS)
       - "443:443" 
     volumes:
-      # Montowanie wolumenu WordPress, aby NGINX miał dostęp do plików statycznych i PHP-FPM
-      - /home/${USER}/data/wordpress:/var/www/html
-      # Montujemy lokalny katalog z certyfikatami (self-signed lub produkcyjnymi)
+      - /home/${USER}/data/wordpress:/var/www/html:ro
       - ./requirements/nginx/ssl:/etc/ssl/certs:ro
     networks:
       - inception_network
@@ -148,4 +145,34 @@ networks:
   # Wymagana sieć typu bridge do komunikacji między kontenerami
   inception_network:
     driver: bridge
+
+
+volumes:
+  mariadb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/${USER}/data/mariadb
+
+  wordpress_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/${USER}/data/wordpress
+
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/${USER}/data/redis
+
+  ftp_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/${USER}/data/ftp
 

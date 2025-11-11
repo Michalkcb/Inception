@@ -156,15 +156,10 @@ if command -v wp >/dev/null 2>&1 && wp core is-installed --allow-root >/dev/null
     if [ -f /var/www/html/wp-config.php ] && ! grep -q "WP_REDIS_HOST" /var/www/html/wp-config.php; then
         log "Dodaję stałe WP_REDIS_HOST i WP_REDIS_PORT do wp-config.php"
         CONFIG="/var/www/html/wp-config.php"
-        # Insert constants before the "/* That's all, stop editing" marker in a portable way
-        awk '{
-            if (!inserted && index($0, "/* That\047s all, stop editing") > 0) {
-                print "define('\''WP_REDIS_HOST'\'', '\''redis'\'');"
-                print "define('\''WP_REDIS_PORT'\'', 6379);"
-                inserted=1
-            }
-            print
-        }' "$CONFIG" > "${CONFIG}.tmp" && mv "${CONFIG}.tmp" "$CONFIG" || true
+        # Insert constants before the "/* That's all, stop editing" marker using sed for portability
+        sed -e "/\/\* That's all, stop editing/i\\
+define('WP_REDIS_HOST', 'redis');\\
+define('WP_REDIS_PORT', 6379);" "$CONFIG" > "${CONFIG}.tmp" && mv "${CONFIG}.tmp" "$CONFIG" || true
         chown www-data:www-data /var/www/html/wp-config.php || true
     fi
 
@@ -211,8 +206,7 @@ if command -v wp >/dev/null 2>&1 && wp core is-installed --allow-root >/dev/null
     if [ "$CURRENT_FRONT" != "page" ] || [ "$PAGE_OK" -ne 1 ]; then
         log "Konfiguruję stronę główną (static front page)..."
         # Try to find an existing page with the desired title
-        PAGE_ID=$(wp post list --post_type=page --fields=ID,post_title --format=csv --allow-root 2>/dev/null | awk -F',' -v title="$WP_FRONT_PAGE_TITLE" 'BEGIN{IGNORECASE=1} { if (
-            $2 == title) { print $1; exit } }') || true
+        PAGE_ID=$(wp post list --post_type=page --fields=ID,post_title --format=csv --allow-root 2>/dev/null | awk -F',' -v title="$WP_FRONT_PAGE_TITLE" 'BEGIN{IGNORECASE=1} $2==title{print $1; exit}') || true
 
         if [ -z "$PAGE_ID" ]; then
             log "Tworzę stronę o tytule: $WP_FRONT_PAGE_TITLE"

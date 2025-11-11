@@ -1,5 +1,48 @@
 # Inception — instrukcja uruchomienia i pełna procedura oceny (PL)
 
+## Szybka prezentacja — najpierw MANDATORY, potem BONUS
+
+Jeśli chcesz szybko zaprezentować działający projekt, wykonaj te kroki po kolei.
+
+MANDATORY (szybka ścieżka):
+
+1) Przygotuj lokalny plik `srcs/.env` (skopiuj z `srcs/.env.sample` i uzupełnij).
+
+```bash
+cp srcs/.env.sample srcs/.env
+# edytuj srcs/.env — ustaw DOMAIN_NAME i hasła lokalnie
+```
+
+2) Uruchom cały stos:
+
+```bash
+make up
+```
+
+3) Szybkie sprawdzenia (kontenery + dostęp):
+
+```bash
+docker compose -f srcs/docker-compose.yml ps
+curl -k -I https://$(grep -E '^DOMAIN_NAME=' srcs/.env | cut -d'=' -f2)/ || true
+```
+
+4) WordPress (wp-cli):
+
+```bash
+docker exec -it wordpress bash -lc "wp core is-installed --allow-root"
+docker exec -it wordpress bash -lc "wp user list --allow-root --format=table"
+```
+
+BONUS (opcjonalnie, do pokazania po obowiązkach):
+
+- Redis: `docker exec -it redis redis-cli PING` (PONG)
+- Adminer: `curl -I http://localhost:8081/` (200)
+- Statyczna strona: `curl -I http://localhost:8080/` (200)
+- FTP: `ls -la /home/${USER}/data/ftp` — testy bez instalowania klienta: użyj `curl` lub krótkiego skryptu Python (przykłady w sekcji niżej)
+- Uptime: `curl -I http://localhost:8082/` (200)
+
+---
+
 UWAGI OGÓLNE
 - Pliki konfiguracyjne znajdują się w katalogu `srcs`.
 - Makefile buduje obrazy i uruchamia stack: `make up`.
@@ -89,6 +132,44 @@ docker volume inspect srcs_mariadb_volume
 ```
 
 Pole `Mountpoint` powinno wskazywać na katalog hosta podobny do `/home/<login>/data/wordpress` i `/home/<login>/data/mariadb`.
+
+Migracja istniejących danych do nazwanych wolumenów
+--------------------------------------------------
+Jeśli wcześniej przechowywałeś dane w innych katalogach hosta i chcesz przenieść je do nowych, ocenianych przez system nazwanych wolumenów (które są tutaj zmapowane na `/home/<login>/data/*`), wykonaj jedno z poniższych (wybierz jedną metodę):
+
+1) Proste skopiowanie na hoście (najprostsze, bez użycia Dockera):
+
+```bash
+# utwórz docelowe katalogi jeśli nie istnieją
+mkdir -p /home/$USER/data/wordpress /home/$USER/data/mariadb /home/$USER/data/redis /home/$USER/data/ftp
+
+# skopiuj istniejące pliki (przykład: wordpress)
+rsync -a /ścieżka/do/starego/wordpress/ /home/$USER/data/wordpress/
+
+# ustaw właściciela (kontener mariadb i wordpress oczekują mysql/www-data)
+sudo chown -R 999:999 /home/$USER/data/mariadb || true   # 999 przykładowy UID mysql, dopasuj jeśli trzeba
+sudo chown -R 33:33 /home/$USER/data/wordpress || true   # 33 = www-data
+```
+
+2) Kopiowanie przez tymczasowy kontener (bezpośrednio do wnętrza wolumenu):
+
+```bash
+# przykład: kopiowanie zawartości hostowego katalogu /backup/wordpress do wolumenu srcs_wordpress_data
+docker run --rm -v /backup/wordpress:/from:ro -v srcs_wordpress_data:/to busybox sh -c "cp -a /from/. /to/"
+
+# jeśli używasz nazwanych wolumenów z driver_opts bind (nasza konfiguracja), możesz też kopiować bezpośrednio do /home/$USER/data/...
+```
+
+3) Sprawdź prawa i zgodność po skopiowaniu
+
+```bash
+# upewnij się, że katalogi mają odpowiednie prawa
+ls -la /home/$USER/data/wordpress | head -n5
+docker volume inspect srcs_wordpress_data
+```
+
+Uwaga: jeżeli migrujesz bazę danych (pliki .sql), lepiej zaimportować zrzut SQL do działającej instancji MariaDB przy użyciu `mysql` lub `docker exec mariadb mysql < dump.sql` zamiast kopiować pliki bazy (ponieważ pliki surowe mogą nie być kompatybilne między wersjami).
+
 
 Krok 4 — Nginx i TLS (wymóg: dostęp tylko po 443):
 
@@ -338,7 +419,7 @@ Jest przydatny podczas oceny, bo umożliwia szybkie, graficzne sprawdzenie zawar
 
 5) FTP — podstawowa demonstracja (po uruchomieniu usługi `ftp`)
 
-Upewnij się, że w `srcs/.env` masz ustawione `FTP_USER` i `FTP_PASS` (lokalnie, nie commituj pliku).
+Upewnij się, że w `srcs/.env` masz ustawione `FTP_USER` i `FTP_PASS` (lokalnie, nie commituj pliku). Jeśli nie są ustawione, kontener używa domyślnych: `ftpuser` / `ftp_pass`.
 
 Sprawdź, czy hostowy katalog istnieje i zawiera pliki do pokazania:
 
@@ -346,28 +427,59 @@ Sprawdź, czy hostowy katalog istnieje i zawiera pliki do pokazania:
 ls -la /home/${USER}/data/ftp
 ```
 
-Połącz się z serwerem FTP z hosta (przykład z `lftp`):
+Testowanie FTP bez instalowania klienta — trzy proste metody:
+
+- 1) curl (listowanie katalogu):
 
 ```bash
-# jeśli masz zainstalowane lftp
-lftp -u "$FTP_USER","$FTP_PASS" -p 21 127.0.0.1
-
-# lub prosty test z ftp (uwaga: hasło przesyłane otwartym tekstem)
-ftp -p 127.0.0.1 21
+# użyj swoich danych lub domyślnych ftpuser:ftp_pass
+curl --ftp-method nocwd --list-only "ftp://ftpuser:ftp_pass@127.0.0.1:21/" -v
 ```
 
-Jeśli chcesz pokazać, że plik został zapisany na hostzie i jest widoczny w kontenerze FTP:
+- 3) sprawdzenie bezpośrednio wewnątrz kontenera FTP (brak potrzeby instalacji na hoście):
+
+```bash
+docker exec -it ftp bash -lc "ls -la /home/ftpusers || true"
+```
+
+Jeśli chcesz pokazać, że plik został zapisany na hoście i jest widoczny w kontenerze FTP, możesz też:
 
 ```bash
 # po stronie hosta
 ls -la /home/${USER}/data/ftp
 
-# wewnątrz kontenera (opcjonalnie)
-docker exec -it ftp ls -la /home/ftpusers
+# lub wewnątrz kontenera ftp
+docker exec -it ftp bash -lc "ls -la /home/ftpusers || true"
 ```
 
-Serwer FTP udostępnia katalog użytkownika przez protokół FTP (tekstowy, nieszyfrowany) i pozwala na przesyłanie plików przy użyciu konta FTP skonfigurowanego w `srcs/.env`.
-To przydatny przykład usługi przechowywania plików, bo pokazuje transfer i trwałość danych — pliki wrzucone przez FTP są widoczne w hostowym katalogu `/home/<login>/data/ftp`.
+Serwer FTP udostępnia katalog użytkownika przez protokół FTP (tekstowy, nieszyfrowany) i pozwala na przesyłanie plików przy użyciu konta FTP skonfigurowanego w `srcs/.env`. Pliki wrzucone przez FTP będą widoczne w hostowym katalogu `/home/<login>/data/ftp`.
+
+Przykłady: utworzenie, przesłanie i skasowanie pliku testowego (bez instalacji klienta)
+
+- A) Utworzenie pliku testowego na hoście i przesłanie go przez curl:
+
+```bash
+# utwórz plik testowy lokalnie
+echo "test $(date +%s)" > /tmp/ftp-test.txt
+
+# wyślij plik do katalogu głównego FTP (użyj właściwych poświadczeń)
+curl -T /tmp/ftp-test.txt "ftp://ftpuser:ftp_pass@127.0.0.1:21/ftp-test.txt" -v
+
+# sprawdź, że plik jest widoczny
+curl --ftp-method nocwd --list-only "ftp://ftpuser:ftp_pass@127.0.0.1:21/" -v
+```
+
+
+
+- C) Utworzenie/usunięcie pliku bezpośrednio wewnątrz kontenera FTP (szybkie demo):
+
+```bash
+# utwórz plik w katalogu użytkownika FTP
+docker exec -it ftp bash -lc "bash -lc 'echo test > /home/ftpusers/ftp-demo.txt && ls -la /home/ftpusers'"
+
+# usuń plik
+docker exec -it ftp bash -lc "rm -f /home/ftpusers/ftp-demo.txt && ls -la /home/ftpusers"
+```
 
 6) Uptime / Health (bonus) — jak pokazać
 

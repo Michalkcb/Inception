@@ -1,4 +1,6 @@
-FROM debian:bookworm
+# Use Debian as base
+FROM debian:12
+ARG WORDPRESS_VERSION
 # Użyj Debiana jako obrazu bazowego [cite: 249]
 ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 # Instalacja PHP-FPM, klienta MariaDB, Wget i niezbędnych rozszerzeń
@@ -17,12 +19,13 @@ RUN apt update -y && \
 RUN wget -O /usr/local/bin/wp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
     chmod +x /usr/local/bin/wp
 
-# Pobieranie WordPressa i ustawienie katalogu roboczego
+# Pobieranie WordPressa w wersji określonej przez build-arg WORDPRESS_VERSION
 WORKDIR /var/www/html
-RUN wget https://wordpress.org/latest.tar.gz && \
-    tar -xzf latest.tar.gz && \
+RUN if [ -z "${WORDPRESS_VERSION:-}" ]; then echo "ERROR: WORDPRESS_VERSION build-arg not set"; exit 1; fi && \
+    wget -O /tmp/wordpress.tar.gz "https://wordpress.org/wordpress-${WORDPRESS_VERSION}.tar.gz" && \
+    tar -xzf /tmp/wordpress.tar.gz && \
     mv wordpress/* . && \
-    rm -rf latest.tar.gz wordpress && \
+    rm -rf /tmp/wordpress.tar.gz wordpress && \
     chown -R www-data:www-data /var/www/html
 
 # Kopiuj motyw z repo do obrazu (jeśli istnieje)
