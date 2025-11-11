@@ -61,6 +61,19 @@
             margin: 0 auto
         }
 
+        .hero .static-badge {
+            display: inline-block;
+            background: rgba(1, 50, 64, 0.45);
+            color: #fff;
+            padding: .4rem .8rem;
+            border-radius: 8px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-size: 1.25rem;
+            margin: 0 0 .75rem;
+        }
+
         .hero h1 {
             font-size: 2.6rem;
             margin: 0 0 .5rem
@@ -186,6 +199,11 @@
         }
 
         @media(min-width:900px) {
+            .hero .static-badge {
+                font-size: 1.6rem;
+                padding: .5rem 1rem;
+            }
+
             .hero h1 {
                 font-size: 3.4rem
             }
@@ -209,6 +227,7 @@
             </nav>
         </div>
         <div class="hero">
+            <div class="static-badge">STATIC SITE</div>
             <h1>Odkryj Greckie archipelagi na własnym jachcie</h1>
             <p>Organizujemy czartery jachtów w Morzu Egejskim — krótkie rejsy, tygodniowe wyprawy i indywidualne
                 trasy. Luksusowa flota, doświadczona załoga i pełne wsparcie.</p>
